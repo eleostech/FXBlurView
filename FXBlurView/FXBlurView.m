@@ -130,6 +130,7 @@
 @interface FXBlurLayer: CALayer
 
 @property (nonatomic, assign) CGFloat blurRadius;
+@property BOOL needsContentUpdate;
 
 @end
 
@@ -454,6 +455,7 @@
 - (void)setNeedsDisplay
 {
     [super setNeedsDisplay];
+    [[self blurLayer] setNeedsContentUpdate:YES];
     [self.layer setNeedsDisplay];
 }
 
@@ -462,14 +464,16 @@
     __strong CALayer *underlyingLayer = [self underlyingLayer];
     
     return
-    underlyingLayer && !underlyingLayer.hidden &&
-    self.blurEnabled && [FXBlurScheduler sharedInstance].blurEnabled &&
+    underlyingLayer && !underlyingLayer.hidden && self.blurEnabled && [FXBlurScheduler sharedInstance].blurEnabled &&
     !CGRectIsEmpty([self.layer.presentationLayer ?: self.layer bounds]) && !CGRectIsEmpty(underlyingLayer.bounds);
 }
 
 - (void)displayLayer:(__unused CALayer *)layer
 {
-    [self updateAsynchronously:NO completion:NULL];
+    if (self.dynamic || [self blurLayer].needsContentUpdate) {
+        [self updateAsynchronously:NO completion:NULL];
+        [[self blurLayer] setNeedsContentUpdate:NO];
+    }
 }
 
 - (id<CAAction>)actionForLayer:(CALayer *)layer forKey:(NSString *)key
